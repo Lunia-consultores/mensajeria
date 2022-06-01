@@ -1,0 +1,14 @@
+{
+  "name": "lunia/mensajeria",
+  "description": "Conjunto de utilidades para mensajería asíncrona",
+  "minimum-stability": "stable",
+  "license": "Lunia consultores",
+  "authors": [
+    {
+      "name": "Jaime Mulero",
+      "email": "jmulero@lunia.es"
+    }
+  ],
+  "require": {
+  }
+}
