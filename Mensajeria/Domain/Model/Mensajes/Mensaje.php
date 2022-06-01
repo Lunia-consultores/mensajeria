@@ -11,7 +11,7 @@ namespace Mensajeria\Domain\Model\Mensajes;
 class Mensaje
 {
     /**
-     * @var string
+     * @var RoutingKey
      */
     public $routingKey;
     /**
@@ -19,7 +19,7 @@ class Mensaje
      */
     public $payload;
 
-    public function __construct(string $routingKey, Payload $payload)
+    public function __construct(RoutingKey $routingKey, Payload $payload)
     {
         $this->routingKey = $routingKey;
         $this->payload = $payload;

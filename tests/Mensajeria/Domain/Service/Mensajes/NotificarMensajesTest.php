@@ -1,11 +1,14 @@
 <?php
 
-namespace Tests\Mensajeria\Infrastructure\PhpAmqpLib\Domain\Service\Mensajes;
+namespace Tests\Mensajeria\Domain\Service\Mensajes;
 
 use Mensajeria\Domain\Model\Conexion\Conexion;
+use Mensajeria\Domain\Model\Conexion\DatosConexion;
 use Mensajeria\Domain\Model\Mensajes\Mensaje;
 use Mensajeria\Domain\Model\Mensajes\Payload;
-use Mensajeria\Infrastructure\PhpAmqpLib\Domain\Service\Mensajes\NotificarMensajesPhpAmqpLib;
+use Mensajeria\Domain\Model\Mensajes\RoutingKey;
+use Mensajeria\Domain\Model\Mensajes\TipoMensaje;
+use Mensajeria\Domain\Service\Mensajes\NotificarMensajes;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPIOException;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +17,7 @@ use ReflectionClass;
 use ReflectionException;
 use Tests\TestRabbitmq;
 
-class NotificarMensajesPhpAmqpLibTest extends TestCase
+class NotificarMensajesTest extends TestCase
 {
     use TestRabbitmq;
 
@@ -38,10 +41,9 @@ class NotificarMensajesPhpAmqpLibTest extends TestCase
 
     public function testShouldCallConexionWithParametersSpecified()
     {
+        $conexion = new DatosConexion('127.0.0.1', 5672, 'guest', 'guest', '/', 'exchange');
 
-        $conexion = new Conexion('127.0.0.1', 5672, 'guest', 'guest', '/', 'exchange');
-
-        $notificar = new NotificarMensajesPhpAmqpLib($conexion);
+        $notificar = new NotificarMensajes($conexion);
 
         $this->callMethod(
             $notificar,
@@ -49,7 +51,7 @@ class NotificarMensajesPhpAmqpLibTest extends TestCase
             []
         );
 
-        $this->assertEquals(AMQPStreamConnection::class, get_class($notificar->rabbitmqConexion()));
+        $this->assertEquals(Conexion::class, get_class($notificar->conexion()));
 
     }
 
@@ -58,9 +60,9 @@ class NotificarMensajesPhpAmqpLibTest extends TestCase
 
         $this->expectException(AMQPIOException::class);
 
-        $conexion = new Conexion('127.0..1', 5672, 'guest', 'guest', '/', 'exchange');
+        $conexion = new DatosConexion('127.0..1', 5672, 'guest', 'guest', '/', 'exchange');
 
-        $notificar = new NotificarMensajesPhpAmqpLib($conexion);
+        $notificar = new NotificarMensajes($conexion);
 
         $this->callMethod(
             $notificar,
@@ -71,23 +73,23 @@ class NotificarMensajesPhpAmqpLibTest extends TestCase
 
     public function testDebeMandarMensajesPasadosPorParametros()
     {
-        $conexion = new Conexion('127.0.0.1', 5672, 'guest', 'guest', '/', '');
+        $conexion = new DatosConexion('127.0.0.1', 5672, 'guest', 'guest', '/', '');
 
-        $notificar = new NotificarMensajesPhpAmqpLib($conexion);
+        $notificar = new NotificarMensajes($conexion);
 
         $notificar->execute(
             [
-                new Mensaje('tipo:mensaje-uno',
+                new Mensaje(new RoutingKey('tipo:mensaje-uno'),
                     new Payload(
-                        'mensaje-prueba',
+                        new TipoMensaje('mensaje-prueba'),
                         [
                             'id' => 27
                         ]
                     )
                 ),
-                new Mensaje('tipo:mensaje-uno',
+                new Mensaje(new RoutingKey('tipo:mensaje-uno'),
                     new Payload(
-                        'mensaje-prueba',
+                        new TipoMensaje('mensaje-prueba'),
                         [
                             'id' => 27
                         ]
@@ -105,15 +107,15 @@ class NotificarMensajesPhpAmqpLibTest extends TestCase
 
     public function testDebeMandarMensajeConElContenidoCorrect()
     {
-        $conexion = new Conexion('127.0.0.1', 5672, 'guest', 'guest', '/', '');
+        $conexion = new DatosConexion('127.0.0.1', 5672, 'guest', 'guest', '/', '');
 
-        $notificar = new NotificarMensajesPhpAmqpLib($conexion);
+        $notificar = new NotificarMensajes($conexion);
 
         $notificar->execute(
             [
-                new Mensaje('tipo:mensaje-uno',
+                new Mensaje(new RoutingKey('tipo:mensaje-uno'),
                     new Payload(
-                        'mensaje-prueba',
+                        new TipoMensaje('mensaje-prueba'),
                         [
                             'id' => 27
                         ]
@@ -124,7 +126,7 @@ class NotificarMensajesPhpAmqpLibTest extends TestCase
 
         $mensajes = $this->obtenerMensajes('tipo:mensaje-uno', 2);
 
-        $this->assertEquals('mensaje-prueba', $mensajes[0]['tipo']);
+        $this->assertEquals((string)new TipoMensaje('mensaje-prueba'), $mensajes[0]['tipo']);
         $this->assertEquals(['id' => 27], $mensajes[0]['data']);
     }
 

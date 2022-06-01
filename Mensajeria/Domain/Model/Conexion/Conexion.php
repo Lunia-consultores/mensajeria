@@ -2,98 +2,74 @@
 
 namespace Mensajeria\Domain\Model\Conexion;
 
+use PhpAmqpLib\Channel\AMQPChannel;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Wire\AMQPWriter;
+
 /**
  *
  */
 class Conexion
 {
     /**
-     * @var string
+     * @var AMQPStreamConnection
      */
-    protected $host;
+    private $conexionRabbit;
     /**
-     * @var int
+     * @var AMQPChannel
      */
-    protected $puerto;
-    /**
-     * @var ?string
-     */
-    protected $usuario;
-    /**
-     * @var ?string
-     */
-    protected $clave;
-    /**
-     * @var string
-     */
-    protected $vhost;
-    /**
-     * @var string
-     */
-    protected $exchange;
+    private $canal;
 
     /**
-     * @param string $host
-     * @param int $puerto
-     * @param string|null $usuario
-     * @param string|null $clave
-     * @param string $vhost
-     * @param string $exchange
+     * @param $conexionRabbit
+     * @param $canal
      */
-    public function __construct(string $host, int $puerto, ?string $usuario, ?string $clave, string $vhost, string $exchange)
+    public function __construct(AMQPStreamConnection $conexionRabbit, AMQPChannel $canal)
     {
-        $this->host = $host;
-        $this->puerto = $puerto;
-        $this->usuario = $usuario;
-        $this->clave = $clave;
-        $this->vhost = $vhost;
-        $this->exchange = $exchange;
-    }
-
-    public function exchange(): string
-    {
-        return $this->exchange;
-    }
-
-    /**
-     * @return string
-     */
-    public function host(): string
-    {
-        return $this->host;
-    }
-
-    /**
-     * @return int
-     */
-    public function puerto(): int
-    {
-        return $this->puerto;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function usuario(): ?string
-    {
-        return $this->usuario;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function clave(): ?string
-    {
-        return $this->clave;
-    }
-
-    /**
-     * @return string
-     */
-    public function vhost(): string
-    {
-        return $this->vhost;
+        $this->conexionRabbit = $conexionRabbit;
+        $this->canal = $canal;
+        $this->canal->basic_qos(null, 1, null);
     }
 
 
+    /**
+     * @return AMQPChannel
+     */
+    public function canal(): AMQPChannel
+    {
+        return $this->canal;
+    }
+
+    public function cerrar(): void
+    {
+        $this->canal->close();
+        $this->conexionRabbit->close();
+    }
+
+    public function loop(): void
+    {
+        $pid = pcntl_fork();
+        if ($pid == -1) {
+            die('could not fork');
+        } else if ($pid) {
+            while (true) {
+                $this->sendHeartbeat();
+                sleep(10);
+            }
+        } else {
+            while ($this->canal->is_open()) {
+                $this->canal->wait();
+            }
+        }
+    }
+
+    private function sendHeartbeat()
+    {
+        $pkt = new AMQPWriter();
+        $pkt->write_octet(8);
+        $pkt->write_short(0);
+        $pkt->write_long(0);
+        $pkt->write_octet(0xCE);
+        $this->conexionRabbit->getIO()->write($pkt->getvalue());
+    }
 }

@@ -13,7 +13,11 @@ class Payload
      */
     public $data;
 
-    public function __construct(string $tipo, $data)
+    /**
+     * @param TipoMensaje $tipo
+     * @param $data
+     */
+    public function __construct(TipoMensaje $tipo, $data)
     {
         $this->tipo = $tipo;
         $this->data = $data;
@@ -23,7 +27,7 @@ class Payload
     {
         return json_encode(
             [
-                'tipo' => $this->tipo,
+                'tipo' => (string)$this->tipo,
                 'data' => $this->data
             ]);
     }
