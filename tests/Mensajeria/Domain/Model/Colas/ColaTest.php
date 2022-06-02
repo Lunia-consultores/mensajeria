@@ -13,6 +13,7 @@ use Mensajeria\Domain\Model\Mensajes\RoutingKey;
 use Mensajeria\Domain\Model\Mensajes\TipoMensaje;
 use Mensajeria\Domain\Service\Conexion\InicializaConexion;
 use Mensajeria\Domain\Service\Mensajes\NotificarMensajes;
+use Mensajeria\Domain\Service\Mensajes\NotificarMensajeSincrono;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PHPUnit\Framework\TestCase;
 use Tests\TestRabbitmq;
@@ -21,6 +22,7 @@ class ColaTest extends TestCase
 {
     use TestRabbitmq;
     private Conexion $conexion;
+    private Conexion $conexion2;
     private DatosConexion $datosConexion;
 
     protected function setUp(): void
@@ -30,6 +32,7 @@ class ColaTest extends TestCase
         $this->datosConexion = new DatosConexion('127.0.0.1', 5672, 'guest', 'guest', '/', '');
 
         $this->conexion = (new InicializaConexion())->execute($this->datosConexion);
+        $this->conexion2 = (new InicializaConexion())->execute($this->datosConexion);
 
         $this->initConnection();
 
@@ -62,7 +65,7 @@ class ColaTest extends TestCase
 
         $cola = new Cola($uuid,$this->conexion, false,[$manejador]);
 
-        $notificar = new NotificarMensajes($this->datosConexion);
+        $notificar = new NotificarMensajes($this->conexion);
 
         $notificar->execute(
             [
@@ -86,6 +89,45 @@ class ColaTest extends TestCase
         $this->assertEquals(27,$resultado);
     }
 
+
+    public function testDebeDevolverLaRespuestaEnCasoDeMensajeSincrono(){
+
+        $correlationId = 45;
+        $replyTo = uniqid();
+
+        $manejador = new Manejador([new TipoMensaje('cancelar-solicitud-plaza')], function(Payload $payload) use (&$resultado){
+            $resultado = (new ApplicationServicePrueba)->handle(
+                new ApplicationServicePruebaRequest(
+                    $payload->data['persona_uuid']
+                )
+            );
+            return $resultado;
+        });
+
+        $uuid = uniqid();
+
+        $cola = new Cola($uuid,$this->conexion2, false,[$manejador]);
+
+        $payloadPregunta = new Payload(new TipoMensaje('cancelar-solicitud-plaza'), [
+            'persona_uuid' => uniqid(),
+            'fecha' => date('Y-m-d'),
+        ]);
+
+        $mensajeInicial = new Mensaje(new RoutingKey($uuid), $payloadPregunta, true,$correlationId, $replyTo);
+
+        (new NotificarMensajeSincrono($this->conexion))->execute($mensajeInicial);
+
+        $cola->consumir();
+
+        try{
+            $this->conexion2->loopHastaQueVacia();
+        }catch (AMQPTimeoutException $AMQPTimeoutException){
+
+        }
+        $this->conexion->cerrar();
+        $this->conexion2->cerrar();
+    }
+
     public function testNoDebeEjecutarElManejador(){
 
         $resultado = 1;
@@ -104,7 +146,7 @@ class ColaTest extends TestCase
 
         $cola = new Cola($uuid,$this->conexion, false,[$manejador]);
 
-        $notificar = new NotificarMensajes($this->datosConexion);
+        $notificar = new NotificarMensajes($this->conexion);
 
         $notificar->execute(
             [

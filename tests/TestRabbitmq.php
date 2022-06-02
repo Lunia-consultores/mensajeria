@@ -3,6 +3,7 @@
 namespace Tests;
 
 use GuzzleHttp\Client;
+use Psr\Http\Message\ResponseInterface;
 use Squeezely\RabbitMQ\Management\Configuration\AbstractConfiguration;
 use Squeezely\RabbitMQ\Management\Configuration\ArrayConfiguration;
 use Squeezely\RabbitMQ\Management\Queue\QueueService;
@@ -15,6 +16,16 @@ trait TestRabbitmq
      */
     private $config;
 
+    public function parseaMensajes(ResponseInterface $response)
+    {
+
+        $mensajes = json_decode($response->getBody(), true);
+
+        return array_map(function ($mensaje) {
+            return json_decode($mensaje['payload'], true);
+        }, $mensajes);
+
+    }
     protected function initConnection(): void {
 
         $this->config = new AbstractConfiguration('127.0.0.1', 15672, 'http', 'guest', 'guest');

@@ -19,16 +19,26 @@ class Conexion
      * @var AMQPChannel
      */
     private $canal;
+    private DatosConexion $datosConexion;
 
     /**
      * @param $conexionRabbit
      * @param $canal
      */
-    public function __construct(AMQPStreamConnection $conexionRabbit, AMQPChannel $canal)
+    public function __construct(AMQPStreamConnection $conexionRabbit, AMQPChannel $canal, DatosConexion $datosConexion)
     {
         $this->conexionRabbit = $conexionRabbit;
         $this->canal = $canal;
         $this->canal->basic_qos(null, 1, null);
+        $this->datosConexion = $datosConexion;
+    }
+
+    /**
+     * @return DatosConexion
+     */
+    public function datosConexion(): DatosConexion
+    {
+        return $this->datosConexion;
     }
 
 

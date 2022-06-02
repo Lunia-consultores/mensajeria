@@ -12,6 +12,6 @@ class InicializaConexion
     {
         $conexion = new AMQPStreamConnection($datosConexion->host(), $datosConexion->puerto(), $datosConexion->usuario(), $datosConexion->clave(), $datosConexion->vhost());
 
-        return new Conexion($conexion, $conexion->channel());
+        return new Conexion($conexion, $conexion->channel(),$datosConexion);
     }
 }

@@ -4,10 +4,14 @@ namespace Mensajeria\Domain\Model\Colas;
 
 use Mensajeria\Domain\Model\Conexion\Conexion;
 use Mensajeria\Domain\Model\Mensajes\Manejador;
+use Mensajeria\Domain\Model\Mensajes\Mensaje;
 use Mensajeria\Domain\Model\Mensajes\MensajeEnManejadorEquivocadoException;
 use Mensajeria\Domain\Model\Mensajes\Payload;
+use Mensajeria\Domain\Model\Mensajes\RoutingKey;
 use Mensajeria\Domain\Model\Mensajes\TipoMensaje;
+use Mensajeria\Domain\Service\Mensajes\NotificarMensajes;
 use Mensajeria\Domain\Service\Mensajes\ProcesaRespuesta;
+use OutOfBoundsException;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
@@ -38,7 +42,7 @@ class Cola
      * @param bool $exclusiva
      * @param Manejador[] $manejadores
      */
-    public function __construct(string $nombre, Conexion $conexion, bool $exclusiva, array $manejadores)
+    public function __construct(string $nombre, Conexion $conexion, bool $exclusiva = false, array $manejadores = [])
     {
         $this->nombre = $nombre;
         $this->conexion = $conexion;
@@ -55,6 +59,7 @@ class Cola
     public function consumir(Etiqueta $etiqueta = null,bool $encolarDeVuelta = true)
     {
         $this->conexion->canal()->basic_consume($this->nombre, (string)$etiqueta, false, false, false, false, function (AMQPMessage $req) use ($encolarDeVuelta){
+            $result = null;
 
             $request = json_decode($req->body, true);
 
@@ -68,9 +73,21 @@ class Cola
             $payloadRecibida = new Payload(new TipoMensaje($request['tipo']), $request['data']);
 
             try {
-                (new ProcesaRespuesta())->execute($payloadRecibida, $manejador);
+                $result = (new ProcesaRespuesta())->execute($payloadRecibida, $manejador);
             } catch (MensajeEnManejadorEquivocadoException $manejadorEquivocadoException) {
                 $req->nack();
+            }
+
+            try {
+                $replyTo = $req->get('reply_to');
+                $correlationId = $req->get('correlation_id');
+                (new NotificarMensajes($this->conexion))->execute(
+                    new Mensaje(new RoutingKey($replyTo), new Payload(new TipoMensaje('respuesta-sincrona'),$result), false, $correlationId, $replyTo,true)
+                );
+
+            } catch (OutOfBoundsException $e) {
+                $req->ack();
+                return;
             }
 
             $req->ack();

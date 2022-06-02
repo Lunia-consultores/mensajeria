@@ -14,39 +14,38 @@ use PhpAmqpLib\Message\AMQPMessage;
  */
 class NotificarMensajes {
 
-    /**
-     * @var DatosConexion
-     */
-    protected $datosConexion;
     private Conexion $conexion;
 
-    public function __construct(DatosConexion $conexion)
+    public function __construct(Conexion $conexion)
     {
-        $this->datosConexion = $conexion;
+        $this->conexion = $conexion;
     }
 
     /**
-     * @param Mensaje[] $mensajes
+     * @param Mensaje[]|Mensaje $mensajes
      * @throws Exception
      */
-    public function execute(array $mensajes): void
+    public function execute($mensajes): void
     {
-        $this->iniciaConexion();
+        if(!is_array($mensajes)) {
+            $mensajes = [$mensajes];
+        }
 
         foreach ($mensajes as $mensaje) {
-            $msg = new AMQPMessage((string)$mensaje->payload);
-            $this->conexion->canal()->basic_publish($msg, $this->datosConexion->exchange(), $mensaje->routingKey);
+            if($mensaje->esRespuesta()){
+                $msg = new AMQPMessage((string)$mensaje->payload(), [
+                    'correlation_id' => $mensaje->correlationId(),
+                    'reply_to' => $mensaje->replyTo()
+                ]);
+
+                $this->conexion->canal()->basic_publish($msg, $this->conexion->datosConexion()->exchange(), $mensaje->replyTo());
+
+            }else{
+                $msg = new AMQPMessage((string)$mensaje->payload());
+                $this->conexion->canal()->basic_publish($msg, $this->conexion->datosConexion()->exchange(), $mensaje->routingKey());
+
+            }
         }
-        $this->conexion->cerrar();
-    }
-
-
-    /**
-     * @return void
-     */
-    protected function iniciaConexion()
-    {
-        $this->conexion = (new InicializaConexion())->execute($this->datosConexion);
     }
 
     public function conexion()
