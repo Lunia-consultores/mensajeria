@@ -2,6 +2,7 @@
   "name": "lunia/mensajeria",
   "description": "Conjunto de utilidades para mensajería asíncrona",
   "minimum-stability": "stable",
+  "version": "0.1",
   "license": "Lunia consultores",
   "authors": [
     {
