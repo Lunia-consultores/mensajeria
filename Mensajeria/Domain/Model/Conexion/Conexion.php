@@ -62,6 +62,12 @@ class Conexion
             }
         }
     }
+    public function loopHastaQueVacia(): void
+    {
+        while (count($this->canal->callbacks)) {
+            $this->canal->wait(null,false,2);
+        }
+    }
 
     private function sendHeartbeat()
     {

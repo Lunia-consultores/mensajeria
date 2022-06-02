@@ -9,20 +9,25 @@ use Squeezely\RabbitMQ\Management\Queue\QueueService;
 
 trait TestRabbitmq
 {
+    private QueueService $queueService;
+    /**
+     * @var AbstractConfiguration|ArrayConfiguration
+     */
+    private $config;
+
+    protected function initConnection(): void {
+
+        $this->config = new AbstractConfiguration('127.0.0.1', 15672, 'http', 'guest', 'guest');
+        $this->queueService = new QueueService($this->config);
+
+    }
+
     protected function initQueue(): void {
 
-        $config = new AbstractConfiguration('127.0.0.1', 15672, 'http', 'guest', 'guest');
-        $config = new ArrayConfiguration([
-            'hostname' => '127.0.0.1',
-            'port' => 15672,
-            'protocol' => 'http',
-            'username' => 'guest',
-            'password' => 'guest'
-        ]);
+        $this->initConnection();
 
-        $queueService = new QueueService($config);
 
-        $queueService->createQueue(
+        $this->queueService->createQueue(
             'tipo:mensaje-uno',
             '%2F',
             [
@@ -79,5 +84,11 @@ trait TestRabbitmq
                 'mode' => 'purge',
             ]
         ]);
+    }
+
+    public function existeCola(string $nombre,string $vhost = '%2F'){
+        $cola = $this->queueService->getQueue($nombre,$vhost);
+
+        return $cola;
     }
 }
