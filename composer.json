@@ -3,7 +3,7 @@
   "description": "Conjunto de utilidades para mensajería asíncrona",
   "minimum-stability": "stable",
   "version": "0.1",
-  "license": "Lunia consultores",
+  "license": "MIT",
   "authors": [
     {
       "name": "Jaime Mulero",
