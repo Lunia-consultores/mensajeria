@@ -11,7 +11,7 @@
     }
   ],
   "require": {
-    "php": "^7.3|^7.4|^8.1",
+    "php": "^7.3|^7.4|^8.0|^8.1",
     "php-amqplib/php-amqplib": "^3.2",
     "ext-sockets": "*",
     "ext-json": "*",
