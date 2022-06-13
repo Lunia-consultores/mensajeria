@@ -88,10 +88,10 @@ class Mensaje
     }
 
     public function compararContenido(Mensaje $otroMensaje): bool {
-        return ($this->payload === $otroMensaje->payload) &&
-            ($this->routingKey === $otroMensaje->routingKey) &&
-            ($this->esSincrono() === $otroMensaje->esSincrono()) &&
-            ($this->esRespuesta() === $otroMensaje->esRespuesta());
+        return ($this->payload == $otroMensaje->payload) &&
+            ($this->routingKey == $otroMensaje->routingKey) &&
+            ($this->esSincrono() == $otroMensaje->esSincrono()) &&
+            ($this->esRespuesta() == $otroMensaje->esRespuesta());
     }
 
 
